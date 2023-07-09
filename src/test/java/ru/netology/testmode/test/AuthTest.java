@@ -4,79 +4,78 @@ import com.codeborne.selenide.Condition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import ru.netology.testmode.data.DataGenerator;
+import ru.netology.testmode.data.DataGenerator.RegistrationDto;
 
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.open;
-import static ru.netology.testmode.data.DataGenerator.Registration.getRegisteredUser;
-import static ru.netology.testmode.data.DataGenerator.Registration.getUser;
-import static ru.netology.testmode.data.DataGenerator.getRandomLogin;
-import static ru.netology.testmode.data.DataGenerator.getRandomPassword;
 
-class AuthTest {
+public class AuthTest {
 
     @BeforeEach
-    void setup() {
-
+    void setUp() {
         open("http://localhost:9999");
     }
 
     @Test
-    @DisplayName("Should successfully login with active registered user")
-    void shouldSuccessfulLoginIfRegisteredActiveUser() {
-        var registeredUser = getRegisteredUser("active");
-        $("[data-test-id='login'] input").setValue(registeredUser.getLogin());
-        $("[data-test-id='password'] input").setValue(registeredUser.getPassword());
-        $("button.button").click();
-        $("h2").shouldHave(Condition.exactText("Личный кабинет")).shouldBe(Condition.visible);
+    @DisplayName("Should successfully login with an active registered user")
+    void shouldSuccessfullyLoginWithActiveRegisteredUser() {
+        RegistrationDto registeredUser = DataGenerator.Registration.getRegisteredUser("active");
+        login(registeredUser);
+        verifyLoggedIn("Личный кабинет");
     }
 
     @Test
-    @DisplayName("Should get error message if login with not registered user")
-    void shouldGetErrorIfNotRegisteredUser() {
-        var notRegisteredUser = getUser("active");
-        $("[data-test-id='login'] input").setValue(notRegisteredUser.getLogin());
-        $("[data-test-id='password'] input").setValue(notRegisteredUser.getPassword());
-        $("button.button").click();
-        $("[data-test-id='error-notification'] .notification__content")
-                .shouldHave(Condition.text("Ошибка! Неверно указан логин или пароль"))
-                .shouldBe(Condition.visible);
+    @DisplayName("Should get an error message if login with an unregistered user")
+    void shouldGetErrorIfUnregisteredUser() {
+        RegistrationDto unregisteredUser = DataGenerator.Registration.getUser("active");
+        login(unregisteredUser);
+        verifyErrorMessage("Ошибка! Неверно указан логин или пароль");
     }
 
     @Test
-    @DisplayName("Should get error message if login with blocked registered user")
+    @DisplayName("Should get an error message if login with a blocked user")
     void shouldGetErrorIfBlockedUser() {
-        var blockedUser = getRegisteredUser("blocked");
-        $("[data-test-id='login'] input").setValue(blockedUser.getLogin());
-        $("[data-test-id='password'] input").setValue(blockedUser.getPassword());
-        $("button.button").click();
-        $("[data-test-id='error-notification'] .notification__content")
-                .shouldHave(Condition.text("Ошибка! Пользователь заблокирован"))
-                .shouldBe(Condition.visible);
+        RegistrationDto blockedUser = DataGenerator.Registration.getRegisteredUser("blocked");
+        login(blockedUser);
+        verifyErrorMessage("Ошибка! Пользователь заблокирован");
     }
 
     @Test
-    @DisplayName("Should get error message if login with wrong login")
-    void shouldGetErrorIfWrongLogin() {
-        var registeredUser = getRegisteredUser("active");
-        var wrongLogin = getRandomLogin();
-        $("[data-test-id='login'] input").setValue(wrongLogin);
-        $("[data-test-id='password'] input").setValue(registeredUser.getPassword());
-        $("button.button").click();
-        $("[data-test-id='error-notification'] .notification__content")
-                .shouldHave(Condition.text("Ошибка! Неверно указан логин или пароль"))
-                .shouldBe(Condition.visible);
+    @DisplayName("Should get an error message if login with a wrong username")
+    void shouldGetErrorIfWrongUsername() {
+        RegistrationDto registeredUser = DataGenerator.Registration.getRegisteredUser("active");
+        String wrongUsername = DataGenerator.getRandomLogin();
+        login(wrongUsername, registeredUser.getPassword());
+        verifyErrorMessage("Ошибка! Неверно указан логин или пароль");
     }
 
     @Test
-    @DisplayName("Should get error message if login with wrong password")
+    @DisplayName("Should get an error message if login with a wrong password")
     void shouldGetErrorIfWrongPassword() {
-        var registeredUser = getRegisteredUser("active");
-        var wrongPassword = getRandomPassword();
-        $("[data-test-id='login'] input").setValue(registeredUser.getLogin());
-        $("[data-test-id='password'] input").setValue(wrongPassword);
+        RegistrationDto registeredUser = DataGenerator.Registration.getRegisteredUser("active");
+        String wrongPassword = DataGenerator.getRandomPassword();
+        login(registeredUser.getLogin(), wrongPassword);
+        verifyErrorMessage("Ошибка! Неверно указан логин или пароль");
+    }
+
+    private void login(String login, String password) {
+        $("[data-test-id='login'] input").setValue(login);
+        $("[data-test-id='password'] input").setValue(password);
         $("button.button").click();
+    }
+
+    private void login(RegistrationDto user) {
+        login(user.getLogin(), user.getPassword());
+    }
+
+    private void verifyLoggedIn(String expectedHeaderText) {
+        $("h2").shouldHave(Condition.exactText(expectedHeaderText)).shouldBe(Condition.visible);
+    }
+
+    private void verifyErrorMessage(String expectedErrorMessage) {
         $("[data-test-id='error-notification'] .notification__content")
-                .shouldHave(Condition.text("Ошибка! Неверно указан логин или пароль"))
+                .shouldHave(Condition.text(expectedErrorMessage))
                 .shouldBe(Condition.visible);
     }
 }
